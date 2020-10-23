@@ -1,7 +1,7 @@
-/******************************************
- * 
- * 
- ******************************************/
+/****************************************************
+ * Aluno: Ian Haranaka | RGA: 2018.1904.009-7
+ * Comando de compilação: g++ rot_seq.cpp -o rot_seq
+ ****************************************************/
 
 #include <omp.h>
 #include <iostream>
@@ -11,31 +11,15 @@
 #include <queue>
 using namespace std;
 
-const int infinito = numeric_limits<int>::max();
+const int INFINITO = numeric_limits<int>::max();
 
-struct celula { int i; int j; };
+struct Celula { int i; int j; };
 
-void ImprimeMatriz(vector<vector<int>> grid, int n_linhas, int n_colunas)
+bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas, 
+              Celula origem, Celula destino)
 {
-  for (int k = 0; k < n_linhas; ++k)
-  {
-    for (int l = 0; l < n_colunas; ++l)
-      cout << grid[k][l] << " ";
-    cout << "\n";
-  }
-}
-
-void InsereCelula(queue<celula> &fila, int i, int j)
-{
-  celula cel = {.i = i, .j = j};
-  fila.push(cel);
-}
-
-void Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas, 
-              celula origem, celula destino)
-{
-  queue<celula> fila;
-  celula cel = origem;
+  queue<Celula> fila;
+  Celula cel = origem, viz;
   grid[origem.i][origem.j] = 0;
   bool achou = false;
 
@@ -49,40 +33,80 @@ void Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas,
       achou = true;
     else
     {
-      if (cel.i+1 < n_linhas && grid[cel.i+1][cel.j] == infinito)
+      if (cel.i+1 < n_linhas && grid[cel.i+1][cel.j] == INFINITO)
       {
-        grid[cel.i+1][cel.j] = grid[cel.i][cel.j] + 1;
-        InsereCelula(fila, cel.i+1, cel.j);
+        viz = (Celula){cel.i+1, cel.j};
+        grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+        fila.push(viz);
       }
 
-      if (cel.i-1 >= 0 && grid[cel.i-1][cel.j] == infinito)
+      if (cel.i-1 >= 0 && grid[cel.i-1][cel.j] == INFINITO)
       {
-        grid[cel.i-1][cel.j] = grid[cel.i][cel.j] + 1;
-        InsereCelula(fila, cel.i-1, cel.j);
+        viz = (Celula){cel.i-1, cel.j};
+        grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+        fila.push(viz);
       }
 
-      if (cel.j+1 < n_colunas && grid[cel.i][cel.j+1] == infinito)
+      if (cel.j+1 < n_colunas && grid[cel.i][cel.j+1] == INFINITO)
       {
-        grid[cel.i][cel.j+1] = grid[cel.i][cel.j] + 1;
-        InsereCelula(fila, cel.i, cel.j+1);
+        viz = (Celula){cel.i, cel.j+1};
+        grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+        fila.push(viz);
       }
       
-      if (cel.j-1 >= 0 && grid[cel.i][cel.j-1] == infinito)
+      if (cel.j-1 >= 0 && grid[cel.i][cel.j-1] == INFINITO)
       {
-        grid[cel.i][cel.j-1] = grid[cel.i][cel.j] + 1;
-        InsereCelula(fila, cel.i, cel.j-1);
+        viz = (Celula){cel.i, cel.j-1};
+        grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+        fila.push(viz);
       }
     }
   }
+
+  return achou;
+}
+
+void Backtracking(vector<vector<int>> grid, vector<Celula> &caminho,
+                  Celula origem, Celula destino)
+{
+  Celula cel = destino;
+  caminho.insert(caminho.begin(), cel);
+
+  while (cel.i != origem.i || cel.j != origem.j)
+  {
+    if (grid[cel.i+1][cel.j] == grid[cel.i][cel.j] - 1)
+      cel.i++;
+    else if (grid[cel.i-1][cel.j] == grid[cel.i][cel.j] - 1)
+      cel.i--;
+    else if (grid[cel.i][cel.j+1] == grid[cel.i][cel.j] - 1)
+      cel.j++;
+    else
+      cel.j--;
+
+    caminho.insert(caminho.begin(), cel);
+  }
+}
+
+bool AlgoritmoLee(vector<vector<int>> &grid, vector<Celula> &caminho, 
+                  int n_linhas, int n_colunas, 
+                  Celula origem, Celula destino)
+{
+  if (Expansao(grid, n_linhas, n_colunas, origem, destino))
+  {
+    Backtracking(grid, caminho, origem, destino);
+    return true;
+  }
+
+  return false;
 }
 
 int main(int argc, char **argv)
 {
   ifstream entrada (argv[1]);
-  //ofstream saida (argv[2]);
+  ofstream saida (argv[2]);
   int n_linhas, n_colunas;
   int n_obstaculos;
-  celula origem, destino, aux;
+  Celula origem, destino, aux;
 
   if (entrada.is_open())
   {
@@ -91,7 +115,8 @@ int main(int argc, char **argv)
     entrada >> destino.i >> destino.j;
     entrada >> n_obstaculos;
 
-    vector<vector<int>> grid(n_linhas, vector<int>(n_colunas, infinito));
+    vector<vector<int>> grid(n_linhas, vector<int>(n_colunas, INFINITO));
+    vector<Celula> caminho;
 
     // Marcando os obstaculos
     for (int temp = 0, k, l; temp < n_obstaculos; ++temp)
@@ -102,9 +127,13 @@ int main(int argc, char **argv)
           grid[i][j] = -1;
     }
 
-    Expansao(grid, n_linhas, n_colunas, origem, destino);
-    //ImprimeMatriz(grid, n_linhas, n_colunas);
-
+    if (AlgoritmoLee(grid, caminho, n_linhas, n_colunas, origem, destino))
+    {
+      saida << grid[destino.i][destino.j] << '\n';
+      for (const auto it : caminho)
+        saida << it.i << ' ' << it.j << '\n';
+    }
+         
     entrada.close();
   }
   else
@@ -112,6 +141,6 @@ int main(int argc, char **argv)
     std::cout << "Arquivo não encontrado!\n";
   }
 
-  //saida.close();  
+  saida.close();  
   return 0;
 }
