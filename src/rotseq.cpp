@@ -1,6 +1,6 @@
 /*********************************************************
  * Aluno: Ian Haranaka | RGA: 2018.1904.009-7
- * Comando de compilação: g++ rot_seq.cpp -o rot_seq -Wall
+ * Comando de compilação: g++ rotseq.cpp -o rotseq -Wall
  *********************************************************/
 
 #include <omp.h>
@@ -60,9 +60,9 @@ bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas,
         grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
         fila.push(viz);
       }
+      
     }
   }
-
   return achou;
 }
 
@@ -115,6 +115,7 @@ int main(int argc, char **argv)
     entrada >> destino.i >> destino.j;
     entrada >> n_obstaculos;
 
+    // Cria e inicializa o grid com infinito
     vector<vector<int>> grid(n_linhas, vector<int>(n_colunas, INFINITO));
     vector<Celula> caminho;
 
