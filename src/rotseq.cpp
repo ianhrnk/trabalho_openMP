@@ -1,7 +1,7 @@
-/*********************************************************
+/*****************************************************************
  * Aluno: Ian Haranaka | RGA: 2018.1904.009-7
- * Comando de compilação: g++ rotseq.cpp -o rotseq -Wall
- *********************************************************/
+ * Comando de compilação: g++ rotseq.cpp -o rotseq -fopenmp -Wall
+ *****************************************************************/
 
 #include <omp.h>
 #include <iostream>
@@ -28,7 +28,7 @@ bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas,
   {
     cel = fila.front();
     fila.pop();
-    
+
     if (cel.i == destino.i && cel.j == destino.j)
       achou = true;
     else
@@ -53,16 +53,16 @@ bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas,
         grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
         fila.push(viz);
       }
-      
+
       if (cel.j-1 >= 0 && grid[cel.i][cel.j-1] == INFINITO)
       {
         viz = (Celula){cel.i, cel.j-1};
         grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
         fila.push(viz);
       }
-      
     }
   }
+
   return achou;
 }
 
@@ -87,8 +87,8 @@ void Backtracking(vector<vector<int>> grid, vector<Celula> &caminho,
   }
 }
 
-bool AlgoritmoLee(vector<vector<int>> &grid, vector<Celula> &caminho, 
-                  int n_linhas, int n_colunas, 
+bool AlgoritmoLee(vector<vector<int>> &grid, vector<Celula> &caminho,
+                  int n_linhas, int n_colunas,
                   Celula origem, Celula destino)
 {
   if (Expansao(grid, n_linhas, n_colunas, origem, destino))
@@ -104,9 +104,12 @@ int main(int argc, char **argv)
 {
   ifstream entrada (argv[1]);
   ofstream saida (argv[2]);
+
   int n_linhas, n_colunas;
   int n_obstaculos;
+
   Celula origem, destino, aux;
+  double tini, tfin, texec;
 
   if (entrada.is_open())
   {
@@ -114,6 +117,8 @@ int main(int argc, char **argv)
     entrada >> origem.i >> origem.j;
     entrada >> destino.i >> destino.j;
     entrada >> n_obstaculos;
+
+    tini = omp_get_wtime();
 
     // Cria e inicializa o grid com infinito
     vector<vector<int>> grid(n_linhas, vector<int>(n_colunas, INFINITO));
@@ -130,11 +135,15 @@ int main(int argc, char **argv)
 
     if (AlgoritmoLee(grid, caminho, n_linhas, n_colunas, origem, destino))
     {
+      tfin = omp_get_wtime();
       saida << grid[destino.i][destino.j] << '\n';
       for (const auto it : caminho)
         saida << it.i << ' ' << it.j << '\n';
     }
-         
+
+    texec = tfin - tini;
+    printf("Tempo de execução: %f\n", texec);
+
     entrada.close();
   }
   else
@@ -142,6 +151,6 @@ int main(int argc, char **argv)
     std::cout << "Arquivo não encontrado!\n";
   }
 
-  saida.close();  
+  saida.close();
   return 0;
 }

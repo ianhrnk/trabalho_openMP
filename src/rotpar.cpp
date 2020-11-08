@@ -15,70 +15,61 @@ const int INFINITO = numeric_limits<int>::max();
 
 struct Celula { int i; int j; };
 
-bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas, 
+bool Expansao(vector<vector<int>> &grid, int n_linhas, int n_colunas,
               Celula origem, Celula destino)
 {
-  queue<Celula> fila, nova_fila;
+  vector<Celula> fila, fila_aux;
   Celula cel = origem, viz;
   grid[origem.i][origem.j] = 0;
   bool achou = false;
-  fila.push(cel);
 
-  #pragma omp parallel private(viz)
+  fila.insert(fila.end(), cel);
+  while (!fila.empty() && !achou)
   {
-    #pragma omp single 
-    while (!fila.empty() && !achou)
+    #pragma omp parallel for private(cel, viz)
+    for (auto it = fila.begin(); it != fila.end(); ++it)
     {
-      while (!fila.empty() && !achou)
+      cel = (*it);
+
+      if (cel.i == destino.i && cel.j == destino.j)
+        achou = true;
+      else
       {
-        cel = fila.front();
-        fila.pop();
-        
-        if (cel.i == destino.i && cel.j == destino.j)
-          achou = true;
-        else
+        if (cel.i+1 < n_linhas && grid[cel.i+1][cel.j] == INFINITO)
         {
-          #pragma omp task
-          if (cel.i+1 < n_linhas && grid[cel.i+1][cel.j] == INFINITO)
-          {
-            viz = (Celula){cel.i+1, cel.j};
-            grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
-            #pragma omp critical
-            nova_fila.push(viz);
-          }
+          viz = (Celula){cel.i+1, cel.j};
+          grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+          #pragma omp critical
+          fila_aux.insert(fila_aux.end(), viz);
+        }
 
-          #pragma omp task
-          if (cel.i-1 >= 0 && grid[cel.i-1][cel.j] == INFINITO)
-          {
-            viz = (Celula){cel.i-1, cel.j};
-            grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
-            #pragma omp critical
-            nova_fila.push(viz);
-          }
+        if (cel.i-1 >= 0 && grid[cel.i-1][cel.j] == INFINITO)
+        {
+          viz = (Celula){cel.i-1, cel.j};
+          grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+          #pragma omp critical
+          fila_aux.insert(fila_aux.end(), viz);
+        }
 
-          #pragma omp task
-          if (cel.j+1 < n_colunas && grid[cel.i][cel.j+1] == INFINITO)
-          {
-            viz = (Celula){cel.i, cel.j+1};
-            grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
-            #pragma omp critical
-            nova_fila.push(viz);
-          }
-          
-          #pragma omp task
-          if (cel.j-1 >= 0 && grid[cel.i][cel.j-1] == INFINITO)
-          {
-            viz = (Celula){cel.i, cel.j-1};
-            grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
-            #pragma omp critical
-            nova_fila.push(viz);
-          }
+        if (cel.j+1 < n_colunas && grid[cel.i][cel.j+1] == INFINITO)
+        {
+          viz = (Celula){cel.i, cel.j+1};
+          grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+          #pragma omp critical
+          fila_aux.insert(fila_aux.end(), viz);
+        }
 
-          #pragma omp taskwait
+        if (cel.j-1 >= 0 && grid[cel.i][cel.j-1] == INFINITO)
+        {
+          viz = (Celula){cel.i, cel.j-1};
+          grid[viz.i][viz.j] = grid[cel.i][cel.j] + 1;
+          #pragma omp critical
+          fila_aux.insert(fila_aux.end(), viz);
         }
       }
-      fila.swap(nova_fila);
     }
+    fila.erase(fila.begin(), fila.end());
+    fila.swap(fila_aux);
   }
 
   return achou;
@@ -125,6 +116,7 @@ int main(int argc, char **argv)
   int n_linhas, n_colunas;
   int n_obstaculos;
   Celula origem, destino, aux;
+  double tini, tfin, texec;
 
   if (entrada.is_open())
   {
@@ -133,6 +125,9 @@ int main(int argc, char **argv)
     entrada >> destino.i >> destino.j;
     entrada >> n_obstaculos;
 
+    tini = omp_get_wtime();
+
+    // Cria e inicializa o grid com infinito
     vector<vector<int>> grid(n_linhas, vector<int>(n_colunas, INFINITO));
     vector<Celula> caminho;
 
@@ -147,11 +142,15 @@ int main(int argc, char **argv)
 
     if (AlgoritmoLee(grid, caminho, n_linhas, n_colunas, origem, destino))
     {
+      tfin = omp_get_wtime();
       saida << grid[destino.i][destino.j] << '\n';
       for (const auto it : caminho)
         saida << it.i << ' ' << it.j << '\n';
     }
-         
+
+    texec = tfin - tini;
+    printf("Tempo de execução: %f\n", texec);
+
     entrada.close();
   }
   else
